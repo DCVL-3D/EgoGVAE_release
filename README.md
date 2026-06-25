@@ -36,7 +36,7 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
    - Download the required motion sequences from the [AMASS website](https://amass.is.tue.mpg.de/).
    - Place the downloaded files in the `./data/amass/` directory.
 
-3. ⚙️ **Preprocess the dataset.**
+3. **Preprocess the dataset.**
    To preprocess the downloaded data, we provide two python scripts.
      ```bash
      python ./data/preprocess/preprocess_step1.py --data-root /path/to/amass --smplh-root ./data/smplh
@@ -50,7 +50,7 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
 You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1SBX7KSM8PKOcrYbnUAhXB-rCPgMR47Ac?usp=drive_link). <br>
 After downloading, please place the model weights (`.pth` files) in the `./outputs/pre-trained` folder.
 
-#### Path Configuration
+#### ⚙️ Path Configuration
 Before running the evaluation, please update the dataset and model paths in `./config/config.py` to match your local environment:
 - `HDF5_PATH` & `FILE_LIST_PATH`: Paths to your preprocessed dataset files.
 - `MODEL_PATH`: Path to SMPL model files.
@@ -66,6 +66,27 @@ Once the paths are configured, you can run the evaluation script:
    # Run the evaluation script
    python eval.py
    ```
+
+#### 🔄 Merging Outputs
+After the evaluation is complete, you can merge the generated output `.npz` files into a single format using the provided utility script: 
+
+```bash
+python utils/convert_npz_to_p.py \
+    --input-dir ./outputs/results \
+    --output-dir ./outputs/merged_results
+```
+
+#### 🎥 Visualization
+We provide a script to visualize the merged results in 3D. <br>
+Our visualization tool is built upon [Viser](https://github.com/nerfstudio-project/viser).
+
+To launch the visualization server, please run:
+
+```bash
+python utils/visualization.py \
+    --data-root-dir ./outputs/merged_results \
+    --smplh-npz-path ./data/smplh/neural/model.npz
+```
 
 ## 🏋️ Training
 ```bash
