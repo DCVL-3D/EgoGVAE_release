@@ -71,11 +71,11 @@ Once paths are configured, you can run the evaluation script:
 1. **Merging Outputs**
   - After the evaluation is complete, you can merge output `.npz` files into a single format using the provided script: 
 
-   ```bash
-   python utils/convert_npz_to_p.py \
-       --input-dir ./outputs/results \
-       --output-dir ./outputs/merged_results
-   ```
+      ```bash
+      python utils/convert_npz_to_p.py \
+          --input-dir ./outputs/results \
+          --output-dir ./outputs/merged_results
+      ```
 
 2. **Visualize Outputs**
    - We provide a script to visualize the merged results in 3D. 
