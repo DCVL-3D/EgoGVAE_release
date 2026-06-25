@@ -32,21 +32,25 @@ cd EgoGVAE_release
 pip install -e .
 ```
 ### 🛠️ Data Preparation & Preprocessing
-To run the EgoGVAE inference and training, you need to download the standard human body models.
+To run the EgoGVAE inference and training, please prepare the SMPL model and preprocess the dataset as follows:
 
 #### 1. Download the SMPL-H model file
    - Go to the official [MANO website](https://mano.is.tue.mpg.de/).
-   - Navigate to the **Download** section and download the file named: 
+   - Navigate to the **Download** section and you can download the file named: 
      `Extended SMPL+H model (used in AMASS project)`
    - Extract the downloaded file and place the `.npz` model files into the `./data/smplh/` directory. 
      *(Example path: `./data/smplh/neural/model.npz`)*
      
 2. 🏃‍♂️ **Download the AMASS dataset (Optional for training).**
-   - Go to the [AMASS website](https://amass.is.tue.mpg.de/).
-   - Download the required motion sequences and place them in `./data/amass/`.
+   - Download the required motion sequences from the [AMASS website](https://amass.is.tue.mpg.de/).
+   - Place the downloaded files in the `./data/amass/` directory.
 
-#### 3. Run Initial Preprocessing (Step 1)
-Once the downloads are complete, run the first script to process the raw AMASS data with the SMPL-H model:
-```bash
-python 0a_preprocess_training_data.py --data-root /path/to/amass --smplh-root ./data/smplh
-
+3. ⚙️ **Preprocess the dataset.**
+   To preprocess the downloaded data, we provide two python scripts.
+     ```bash
+     python ./data/preprocess/preprocess_step1.py --data-root /path/to/amass --smplh-root ./data/smplh
+     ```
+     ```bash
+     python ./data/preprocess/preprocess_step2.py --data-npz-dir ./data/processed_30fps_no_skating/
+     ```
+   > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the original [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
