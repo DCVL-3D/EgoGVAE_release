@@ -61,7 +61,7 @@ Before running the evaluation, please update the dataset and model paths in `./c
 - `MODEL_PATH`: Path to SMPL model files.
 - `CHECKPOINT_DIR`: Directory containing the pre-trained model weights (e.g., `./outputs/pre-trained`).
 
-#### Running Evaluation
+#### 🚀 Running Evaluation
 Once the paths are configured, you can run the evaluation script:
 
 ```bash
