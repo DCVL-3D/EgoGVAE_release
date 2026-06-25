@@ -31,19 +31,17 @@ We provide an installation using Conda package and environment management:
 cd EgoGVAE_release
 pip install -e .
 ```
-### ⬇️ Download the SMPL+H model.
+### 🛠️ Data Preparation
 To run the EgoGVAE inference and training, you need to download the standard human body models.
 
 1. 📥 **Download the SMPL-H model file.**
    - Go to the official [MANO website](https://mano.is.tue.mpg.de/).
-   - Create an account and agree to the license terms.
    - Navigate to the **Download** section and download the file named: 
      `Extended SMPL+H model (used in AMASS project)`
-   - Extract the downloaded file and place the `.npz` model files into the `./data/smplh/` directory.
-
+   - Extract the downloaded file and place the `.npz` model files into the `./data/smplh/` directory. 
+     *(Example path: `./data/smplh/neural/model.npz`)*
+     
 2. 🏃‍♂️ **Download the AMASS dataset (Optional for training).**
    - Go to the [AMASS website](https://amass.is.tue.mpg.de/).
    - Download the required motion sequences and place them in `./data/amass/`.
-   - 
-We use the "Extended SMPL+H model" (used in AMASS project)
-Please locate the downloaded files in the ./data/ directory as shown below
+
