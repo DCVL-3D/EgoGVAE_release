@@ -78,7 +78,7 @@ python utils/convert_npz_to_p.py \
 
 #### 🎥 Visualization
 We provide a script to visualize the merged results in 3D. <br>
-Our visualization tool is built upon [Viser](https://github.com/nerfstudio-project/viser).
+Our visualization tool is built upon [viser](https://github.com/nerfstudio-project/viser).
 
 To launch the visualization server, please run:
 
@@ -96,3 +96,14 @@ conda activate egogvae
 # Run the training script
 python train.py
 ```
+
+## Acknowledgments
+This work was supported by the National Research Foundation of Korea (NRF) grant funded by the Korea government (MSIT) (RS-2026-25471545).
+
+Our implementation and experiments are built on top of open-source GitHub repositories. We thank all the authors who made their code public, which tremendously accelerates our project progress. If you find these works helpful, please consider citing them as well.
+
+[brentyi/egoallo](https://github.com/brentyi/egoallo)  </br>
+[Mathux/TEMOS](https://github.com/Mathux/TEMOS)  </br>
+
+## Citation
+If you find our work useful for your project, please consider citing the following paper.
