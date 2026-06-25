@@ -44,7 +44,7 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
      ```bash
      python ./data/preprocess/preprocess_step2.py --data-npz-dir ./data/processed_30fps_no_skating/
      ```
-   > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
+      > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
 
 ## ⚡ Run Inference
 You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1SBX7KSM8PKOcrYbnUAhXB-rCPgMR47Ac?usp=drive_link). <br>
