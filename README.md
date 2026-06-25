@@ -66,7 +66,15 @@ Once the paths are configured, you can run the evaluation script:
 
 ```bash
 # Activate the environment
-conda activate Dedarkening
+conda activate egogvae
 
 # Run the evaluation script
 python eval.py
+
+### 🏋️ Training
+```bash
+# Activate the environment
+conda activate egogvae
+
+# Run the evaluation script
+python train.py
