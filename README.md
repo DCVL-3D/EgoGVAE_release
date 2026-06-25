@@ -44,11 +44,11 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
      ```bash
      python ./data/preprocess/preprocess_step2.py --data-npz-dir ./data/processed_30fps_no_skating/
      ```
-   > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the original [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
+   > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
 
 ## ⚡ Run Inference
 You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1SBX7KSM8PKOcrYbnUAhXB-rCPgMR47Ac?usp=drive_link). <br>
-After downloading, please place the model weights (`.pth` files) in the `./outputs/pre-trained` folder.
+After downloading, please place model weights (`.pth` files) in the `./outputs/pre-trained` folder.
 
 #### ⚙️ Path Configuration
 Before running the evaluation, please update the dataset and model paths in `./config/config.py` to match your local environment:
@@ -57,7 +57,7 @@ Before running the evaluation, please update the dataset and model paths in `./c
 - `CHECKPOINT_DIR`: Directory containing the pre-trained model weights (e.g., `./outputs/pre-trained`).
 
 #### 🚀 Running Evaluation
-Once the paths are configured, you can run the evaluation script:
+Once paths are configured, you can run the evaluation script:
 
    ```bash
    # Activate the environment
@@ -68,7 +68,7 @@ Once the paths are configured, you can run the evaluation script:
    ```
 
 #### 🔄 Merging Outputs
-After the evaluation is complete, you can merge the generated output `.npz` files into a single format using the provided utility script: 
+After the evaluation is complete, you can merge output `.npz` files into a single format using the provided script: 
 
 ```bash
 python utils/convert_npz_to_p.py \
