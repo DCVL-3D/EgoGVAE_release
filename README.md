@@ -37,7 +37,7 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
    - Place the downloaded files in the `./data/amass/` directory.
 
 3. **Preprocess the dataset.**
-   To preprocess the downloaded data, we provide two python scripts.
+   - To preprocess the downloaded data, we provide two python scripts.
      ```bash
      python ./data/preprocess/preprocess_step1.py --data-root /path/to/amass --smplh-root ./data/smplh
      ```
