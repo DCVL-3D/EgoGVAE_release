@@ -19,8 +19,8 @@ We provide:
 
 - ✅ **Full implementation** of EgoGVAE
 
-## ⚙️ Installation
-
+## ✅ Full implementation
+We provide an installation using Conda package and environment management:
 ### 🐍 Clone the repository
 ```bash
 git clone https://github.com/brentyi/egoallo.git
