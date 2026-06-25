@@ -52,5 +52,5 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
    > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the original [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
 
 ### ⚡ Run Inference
-You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1eRg2nJJIce9i5QQJxNwsBZyKD3qSn9rm?usp=drive_link). <br>
-After downloading, please place the model weights (`.pth` files) in the `./pre_weights/` folder.
+You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1SBX7KSM8PKOcrYbnUAhXB-rCPgMR47Ac?usp=drive_link). <br>
+After downloading, please place the model weights (`.pth` files) in the `./outputs/pre-trained` folder.
