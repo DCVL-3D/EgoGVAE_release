@@ -15,11 +15,6 @@ We propose a simple yet powerful method, **EgoGVAE**, for full-body mesh reconst
 **EgoGVAE** leverages the latent space of the motion-to-motion network, which is a variational autoencoder that takes full-body poses as inputs, to **guide the head-to-motion network**. <br>
 This design scheme, which operates with one-step sampling in inference, makes **EgoGVAE perform very fast** compared to diffusion-based approaches.
 
-We provide:
-
-- ✅ **Full implementation** of EgoGVAE
-
-## ✅ Full implementation
 ### 📦 Environment Setup & Install Dependencies
 We provide an installation using Conda package and environment management:
 ```bash
