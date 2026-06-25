@@ -15,14 +15,14 @@ We propose a simple yet powerful method, **EgoGVAE**, for full-body mesh reconst
 **EgoGVAE** leverages the latent space of the motion-to-motion network, which is a variational autoencoder that takes full-body poses as inputs, to **guide the head-to-motion network**. <br>
 This design scheme, which operates with one-step sampling in inference, makes **EgoGVAE perform very fast** compared to diffusion-based approaches.
 
-### 📦 Environment Setup & Install Dependencies
+## 📦 Environment Setup & Install Dependencies
 We provide an installation using Conda package and environment management:
 ```bash
 git clone https://github.com/DCVL-3D/EgoGVAE_release.git
 cd EgoGVAE_release
 pip install -e .
 ```
-### 🛠️ Data Preparation & Preprocessing
+## 🛠️ Data Preparation & Preprocessing
 To run the EgoGVAE inference and training, please prepare the SMPL model and preprocess the dataset as follows:
 
 1. **Download the SMPL-H model file**
@@ -46,7 +46,7 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
      ```
    > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the original [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
 
-### ⚡ Run Inference
+## ⚡ Run Inference
 You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1SBX7KSM8PKOcrYbnUAhXB-rCPgMR47Ac?usp=drive_link). <br>
 After downloading, please place the model weights (`.pth` files) in the `./outputs/pre-trained` folder.
 
@@ -67,7 +67,7 @@ Once the paths are configured, you can run the evaluation script:
    python eval.py
    ```
 
-### 🏋️ Training
+## 🏋️ Training
 ```bash
 # Activate the environment
 conda activate egogvae
