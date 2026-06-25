@@ -1,0 +1,69 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "egogvae"
+version = "0.0.0"
+description = "Ego-body Mesh Reconstruction via Guided Variational Autoencoder"
+readme = "README.md"
+license = { text="Apache-2.0" }
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "torch==2.7.1",
+    "viser>=0.2.11",
+    "typeguard==4.4.3",
+    "jaxtyping==0.3.2",
+    "einops==0.8.1",
+    "rotary-embedding-torch==0.8.6",
+    "h5py==3.13.0",
+    "tensorboard==2.19.0",
+    "projectaria_tools==1.6.0",
+    "accelerate==1.7.0",
+    "tensorboardX==2.6.2.2",
+    "loguru==0.7.3",
+    "projectaria-tools[all]==1.6.0",
+    "opencv-python==4.11.0.86",
+    "gdown==5.2.0",
+    "scikit-learn==1.6.1", # Only needed for preprocessing
+    "smplx==0.1.28", # Only needed for preprocessing
+]
+
+[tool.setuptools.package-data]
+egogvae = ["py.typed"]
+
+[tool.pyright]
+ignore = ["./data/preprocess_from_egoallo/egoallo/preprocessing/**", "./data/preprocess_from_egoallo/preprocess_training_data_n1.py"]
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors.
+    "F",  # Pyflakes rules.
+    "PLC",  # Pylint convention warnings.
+    "PLE",  # Pylint errors.
+    "PLR",  # Pylint refactor recommendations.
+    "PLW",  # Pylint warnings.
+]
+ignore = [
+    "E731",  # Do not assign a lambda expression, use a def.
+    "E741", # Ambiguous variable name. (l, O, or I)
+    "E501",  # Line too long.
+    "E721",  # Do not compare types, use `isinstance()`.
+    "F722",  # Forward annotation false positive from jaxtyping. Should be caught by pyright.
+    "F821",  # Forward annotation false positive from jaxtyping. Should be caught by pyright.
+    "PLR2004",  # Magic value used in comparison.
+    "PLR0915",  # Too many statements.
+    "PLR0913",  # Too many arguments.
+    "PLC0414",  # Import alias does not rename variable. (this is used for exporting names)
+    "PLC1901",  # Use falsey strings.
+    "PLR5501",  # Use `elif` instead of `else if`.
+    "PLR0911",  # Too many return statements.
+    "PLR0912",  # Too many branches.
+    "PLW0603",  # Globa statement updates are discouraged.
+    "PLW2901",  # For loop variable overwritten.
+]
