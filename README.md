@@ -77,6 +77,6 @@ Once the paths are configured, you can run the evaluation script:
 # Activate the environment
 conda activate egogvae
 
-# Run the evaluation script
+# Run the training script
 python train.py
 ```
