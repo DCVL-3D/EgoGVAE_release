@@ -34,11 +34,11 @@ pip install -e .
 ### 🛠️ Data Preparation & Preprocessing
 To run the EgoGVAE inference and training, please prepare the SMPL model and preprocess the dataset as follows:
 
-#### 1. Download the SMPL-H model file
+1. 📥 Download the SMPL-H model file
    - Go to the official [MANO website](https://mano.is.tue.mpg.de/).
-   - Navigate to the **Download** section and you can download the file named: 
+   - Navigate to the **Download** section and you can download the file named: <br>
      `Extended SMPL+H model (used in AMASS project)`
-   - Extract the downloaded file and place the `.npz` model files into the `./data/smplh/` directory. 
+   - Extract the downloaded file and place the `.npz` model files into the `./data/smplh/` directory. <br>
      *(Example path: `./data/smplh/neural/model.npz`)*
      
 2. 🏃‍♂️ **Download the AMASS dataset (Optional for training).**
