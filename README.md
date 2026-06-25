@@ -19,3 +19,16 @@ We provide:
 
 - 🚀 **Minimal plug-and-play code snippet** for quick integration
 - ✅ **Full implementation** of DropGaussian
+
+## ⚙️ Installation
+
+### 🐍 Clone the repository
+```bash
+git clone https://github.com/brentyi/egoallo.git
+```
+
+### 📦 Install Dependencies
+```bash
+cd EgoGVAE_release
+pip install -e .
+```
