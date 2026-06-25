@@ -68,7 +68,7 @@ Once paths are configured, you can run the evaluation script:
    ```
 
 #### 🎥 Visualization
-1. **Merging Outputs.**
+**Merging Outputs.**
    - After the evaluation is complete, you can merge output `.npz` files into a single format using the provided script: 
 
       ```bash
