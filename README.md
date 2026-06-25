@@ -71,21 +71,20 @@ Once paths are configured, you can run the evaluation script:
 **Merging Outputs.**  <br>
 After the evaluation is complete, you can merge output `.npz` files into a single format using the provided script: 
 
-      ```bash
-      python utils/convert_npz_to_p.py \
+   ```bash
+   python utils/convert_npz_to_p.py \
           --input-dir ./outputs/results \
           --output-dir ./outputs/merged_results
-      ```
+   ```
 **Visualize Outputs.**  <br>
-We provide a script to visualize the merged results in 3D.  <br>
-Our visualization tool is built upon [viser](https://github.com/nerfstudio-project/viser).
+We provide a script to visualize the merged results in 3D. Our visualization tool is built upon [viser](https://github.com/nerfstudio-project/viser).
 
    - To launch the visualization server, please run:
 
    ```bash
    python utils/visualization.py \
-       --data-root-dir ./outputs/merged_results \
-       --smplh-npz-path ./data/smplh/neural/model.npz
+          --data-root-dir ./outputs/merged_results \
+          --smplh-npz-path ./data/smplh/neural/model.npz
    ```
 
 ## 🏋️ Training
