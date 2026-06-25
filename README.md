@@ -7,4 +7,4 @@ Official Pytorch implementation **"EgoGVAE: Ego-body Mesh Reconstruction via Gui
 
 <p align="center"><img src='figures/results.gif'></p>
 <p align="center"><img src='figures/overall_architecture.png'></p>
-<p align="center">[ Training pipeline ]</p>
+<p align="center">[ Overall architecture ]</p>
