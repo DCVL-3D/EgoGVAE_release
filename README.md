@@ -1,4 +1,3 @@
 <h1 align="center">EgoGVAE: Ego-body Mesh Reconstruction via<br>Guided Variational Autoencoder</h1>
 
-<video src="https://github.com/user-attachments/assets/e8820473-02db-477a-acc3-dc3f7ebeb9ad" autoplay muted loop width="100%">
-</video>
+<img width="80%" src="https://github.com/user-attachments/assets/2283f628-c14e-40d1-a348-d2f473507d5f" />
