@@ -17,8 +17,7 @@ This design scheme, which operates with one-step sampling in inference, makes **
 
 We provide:
 
-- 🚀 **Minimal plug-and-play code snippet** for quick integration
-- ✅ **Full implementation** of DropGaussian
+- ✅ **Full implementation** of EgoGVAE
 
 ## ⚙️ Installation
 
