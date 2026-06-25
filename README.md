@@ -20,14 +20,10 @@ We provide:
 - ✅ **Full implementation** of EgoGVAE
 
 ## ✅ Full implementation
-### 🐍 Clone the repository
-```bash
-git clone https://github.com/brentyi/egoallo.git
-```
-
-### 📦 Install Dependencies
+### 📦 Environment Setup & Install Dependencies
 We provide an installation using Conda package and environment management:
 ```bash
+git clone https://github.com/DCVL-3D/EgoGVAE_release.git
 cd EgoGVAE_release
 pip install -e .
 ```
@@ -54,3 +50,7 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
      python ./data/preprocess/preprocess_step2.py --data-npz-dir ./data/processed_30fps_no_skating/
      ```
    > 💡 **Note:** For more detailed information regarding the data preprocessing pipeline, please refer to the original [EgoAllo GitHub repository](https://github.com/brentyi/egoallo).
+
+### ⚡ Run Inference
+You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1eRg2nJJIce9i5QQJxNwsBZyKD3qSn9rm?usp=drive_link). <br>
+After downloading, please place the model weights (`.pth` files) in the `./pre_weights/` folder.
