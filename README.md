@@ -3,7 +3,7 @@
 
 Official Pytorch implementation **"EgoGVAE: Ego-body Mesh Reconstruction via Guided Variational Autoencoder"** <br>
 [Jaehun Jung](https://github.com/jaehun00) and [Wonjun Kim](https://sites.google.com/view/dcvl) (Corresponding Author) <br>
-***European Conference on Computer Vision (ECCV)***, Sep. 2026.
+🏙️***European Conference on Computer Vision (ECCV)***, Sep. 2026.🏙️
 
 <p align="center"><img src='figures/results.gif'></p>
 <p align="center"><img src='figures/overall_architecture.png'></p>
