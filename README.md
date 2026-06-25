@@ -30,14 +30,14 @@ pip install -e .
 ### 🛠️ Data Preparation & Preprocessing
 To run the EgoGVAE inference and training, please prepare the SMPL model and preprocess the dataset as follows:
 
-1. 📥 Download the SMPL-H model file
+1. **Download the SMPL-H model file**
    - Go to the official [MANO website](https://mano.is.tue.mpg.de/).
    - Navigate to the **Download** section and you can download the file named: <br>
      `Extended SMPL+H model (used in AMASS project)`
    - Extract the downloaded file and place the `.npz` model files into the `./data/smplh/` directory. <br>
      *(Example path: `./data/smplh/neural/model.npz`)*
      
-2. 🏃‍♂️ **Download the AMASS dataset (Optional for training).**
+2. **Download the AMASS dataset (Optional for training).**
    - Download the required motion sequences from the [AMASS website](https://amass.is.tue.mpg.de/).
    - Place the downloaded files in the `./data/amass/` directory.
 
@@ -54,3 +54,19 @@ To run the EgoGVAE inference and training, please prepare the SMPL model and pre
 ### ⚡ Run Inference
 You can download our pre-trained models from [Google Drive](https://drive.google.com/drive/folders/1SBX7KSM8PKOcrYbnUAhXB-rCPgMR47Ac?usp=drive_link). <br>
 After downloading, please place the model weights (`.pth` files) in the `./outputs/pre-trained` folder.
+
+#### Path Configuration
+Before running the evaluation, please update the dataset and model paths in `./config/config.py` to match your local environment:
+- `HDF5_PATH` & `FILE_LIST_PATH`: Paths to your preprocessed dataset files.
+- `MODEL_PATH`: Path to SMPL model files.
+- `CHECKPOINT_DIR`: Directory containing the pre-trained model weights (e.g., `./outputs/pre-trained`).
+
+#### Running Evaluation
+Once the paths are configured, you can run the evaluation script:
+
+```bash
+# Activate the environment
+conda activate Dedarkening
+
+# Run the evaluation script
+python eval.py
