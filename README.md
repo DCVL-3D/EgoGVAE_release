@@ -64,12 +64,13 @@ Before running the evaluation, please update the dataset and model paths in `./c
 #### 🚀 Running Evaluation
 Once the paths are configured, you can run the evaluation script:
 
-```bash
-# Activate the environment
-conda activate egogvae
+   ```bash
+   # Activate the environment
+   conda activate egogvae
 
-# Run the evaluation script
-python eval.py
+   # Run the evaluation script
+   python eval.py
+   ```
 
 ### 🏋️ Training
 ```bash
@@ -78,3 +79,4 @@ conda activate egogvae
 
 # Run the evaluation script
 python train.py
+```
