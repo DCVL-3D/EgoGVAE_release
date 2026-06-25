@@ -1,3 +1,10 @@
+"""Convert raw AMASS data to HuMoR-style npz format.
+
+Mostly taken from
+https://github.com/davrempe/humor/blob/main/humor/scripts/process_amass_data.py,
+but added gender neutral beta conversion and other utilities.
+"""
+
 import dataclasses
 import os
 import time
@@ -13,7 +20,7 @@ from loguru import logger as guru
 from sklearn.cluster import DBSCAN
 from tqdm import tqdm
 
-from egoallo_original.src.egoallo.preprocessing.body_model import (
+from egoallo.preprocessing.body_model import (
     KEYPT_VERTS,
     SMPL_JOINTS,
     BodyModel,
@@ -21,11 +28,59 @@ from egoallo_original.src.egoallo.preprocessing.body_model import (
     reflect_root_trajectory,
     run_smpl,
 )
-from egoallo_original.src.egoallo.preprocessing.geometry import convert_rotation, joints_global_to_local
-from egoallo_original.src.egoallo.preprocessing.util import move_to
-from egoallo_original.src.egoallo.preprocessing.geometry.rotation import axis_angle_to_matrix, matrix_to_axis_angle
+from egoallo.preprocessing.geometry import convert_rotation, joints_global_to_local
+from egoallo.preprocessing.util import move_to
 
-import joblib
+AMASS_SPLITS = {
+    "train": [
+        "ACCAD",
+        "BMLhandball",
+        "BMLmovi",
+        "BioMotionLab_NTroje",
+        "CMU",
+        "DFaust_67",
+        "DanceDB",
+        "EKUT",
+        "Eyes_Japan_Dataset",
+        "KIT",
+        "MPI_Limits",
+        "TCD_handMocap",
+        "TotalCapture",
+    ],
+    "val": [
+        "HumanEva",
+        "MPI_HDM05",
+        "SFU",
+        "MPI_mosh",
+    ],
+    "test": [
+        "Transitions_mocap",
+        "SSM_synced",
+    ],
+}
+AMASS_SPLITS["all"] = AMASS_SPLITS["train"] + AMASS_SPLITS["val"] + AMASS_SPLITS["test"]
+
+
+def load_neutral_beta_conversion(gender: str) -> Tuple[np.ndarray, np.ndarray]:
+    assert gender in ["female", "male"]
+    data = np.load(f"./data/smplh_gender_conversion/{gender}_to_neutral.npz")
+    return data["A"], data["b"]
+
+
+def convert_gender_neutral_beta(
+    beta: np.ndarray, A: np.ndarray, b: np.ndarray
+) -> np.ndarray:
+    """
+    :param beta (*, B)
+    :param A (B, B)
+    :param b (B)
+    beta_neutral = A @ beta_gender + b
+    """
+    *dims, B = beta.shape
+    A = A.reshape((*(1,) * len(dims), B, B))
+    b = b.reshape((*(1,) * len(dims), B))
+    return np.einsum("...ij,...j->...i", A, beta) + b
+
 
 def determine_floor_height_and_contacts(
     body_joint_seq,
@@ -340,53 +395,78 @@ def compute_align_from_body_right(body_right):
     return world2aligned_mat, world2aligned_aa
 
 
+def estimate_velocity(data_seq, h):
+    """
+    Taken from
+    https://github.com/davrempe/humor/blob/main/humor/scripts/process_amass_data.py
+
+    Given some data sequence of T timesteps in the shape (T, ...), estimates
+    the velocity for the middle T-2 steps using a second order central difference scheme.
+    - h : step size
+    """
+    data_tp1 = data_seq[2:]
+    data_tm1 = data_seq[0:-2]
+    data_vel_seq = (data_tp1 - data_tm1) / (2 * h)
+    return data_vel_seq
 
 
+def estimate_angular_velocity(rot_seq, h):
+    """
+    Taken from
+    https://github.com/davrempe/humor/blob/main/humor/scripts/process_amass_data.py
+
+    Given a sequence of T rotation matrices, estimates angular velocity at T-2 steps.
+    Input sequence should be of shape (T, ..., 3, 3)
+    """
+    # see https://en.wikipedia.org/wiki/Angular_velocity#Calculation_from_the_orientation_matrix
+    dRdt = estimate_velocity(rot_seq, h)
+    R = rot_seq[1:-1]
+    RT = np.swapaxes(R, -1, -2)
+    # compute skew-symmetric angular velocity tensor
+    w_mat = np.matmul(dRdt, RT)
+
+    # pull out angular velocity vector
+    # average symmetric entries
+    w_x = (-w_mat[..., 1, 2] + w_mat[..., 2, 1]) / 2.0
+    w_y = (w_mat[..., 0, 2] - w_mat[..., 2, 0]) / 2.0
+    w_z = (-w_mat[..., 0, 1] + w_mat[..., 1, 0]) / 2.0
+    w = np.stack([w_x, w_y, w_z], axis=-1)
+
+    return w
 
 
-def load_seq_smpl_params(input_data: Dict, num_betas: int = 16):
-    guru.info(f"Loading from {input_data['vid']}")
+def load_seq_smpl_params(input_path: str, num_betas: int = 16):
+    guru.info(f"Loading from {input_path}")
 
-    fps = 30
-    trans = input_data["transl"]  # global translation
-    num_frames = trans.shape[0]
-    root_orient = input_data["global_orient"]  # global root orientation (1 joint)
-    pose_body = input_data["pose"][..., 3:66]  # body joint rotations (21 joints)
-    
-    betas_10 = input_data["betas"][:, :10]
-    padding = np.zeros((num_frames, 6))
-    betas_16 = np.hstack([betas_10, padding])
-    gender = input_data['gender']
-    
-    #######################################################################################
-    # Correct yz
-    trans_t = trans
-    root_orient_t = root_orient
+    # load in input data
+    # we leave out "dmpls" and "marker_data"/"marker_label" which are not present in all datasets
+    bdata = np.load(input_path)
+    gender = np.array(bdata["gender"], ndmin=1)[0]
+    gender = str(gender, "utf-8") if isinstance(gender, bytes) else str(gender)
+    fps = bdata["mocap_framerate"]
+    trans = bdata["trans"][:]  # global translation
+    num_frames = len(trans)
+    root_orient = bdata["poses"][:, :3]  # global root orientation (1 joint) 3
+    pose_body = bdata["poses"][:, 3:66]  # body joint rotations (21 joints) 63
+    pose_hand = bdata["poses"][:, 66:]  # finger articulation joint rotations
+    betas = np.tile(
+        bdata["betas"][None, :num_betas], [num_frames, 1]
+    )  # body shape parameters
 
-    rot_mat = torch.tensor([
-        [1, 0, 0],
-        [0, 0, 1],
-        [0, -1, 0]
-    ], dtype=torch.float32)
+    # correct mislabeled data
+    if input_path.find("BMLhandball") >= 0:
+        fps = 240
+    if input_path.find("20160930_50032") >= 0 or input_path.find("20161014_50033") >= 0:
+        fps = 59
 
-    trans_t = torch.matmul(trans_t, rot_mat.T)
-    
-    root_orient_mat_t = axis_angle_to_matrix(root_orient_t)
-    new_root_orient_mat_t = rot_mat @ root_orient_mat_t
-    root_orient_t = matrix_to_axis_angle(new_root_orient_mat_t)
-
-    trans = trans_t.numpy()
-    root_orient = root_orient_t.numpy()
-    #######################################################################################
-
-    
     model_vars = {
         "trans": trans,
         "root_orient": root_orient,
         "pose_body": pose_body,
-        "betas": betas_10,
+        "pose_hand": pose_hand,
+        "betas": betas,
     }
-    meta = {"fps": fps, "num_frames": num_frames, 'gender': gender}
+    meta = {"fps": fps, "gender": gender, "num_frames": num_frames}
     guru.info(f"meta {meta}")
     guru.info(f"model var shapes {str({k: v.shape for k, v in model_vars.items()})}")
     return model_vars, meta
@@ -428,31 +508,13 @@ def run_batch_smpl(
     verts_all = torch.cat(batch_verts, dim=0) if len(batch_verts) > 0 else None
     return joints_all, verts_all
 
-def load_neutral_beta_conversion(gender: str) -> Tuple[np.ndarray, np.ndarray]:
-    assert gender in ["female", "male"]
-    data = np.load(f"/home/dev2/Drive_C/KHW/_egotext/head2motion/data/egoallo_original/data/smplh_gender_conversion/{gender}_to_neutral.npz")
-    return data["A"], data["b"]
-
-
-def convert_gender_neutral_beta(
-    beta: np.ndarray, A: np.ndarray, b: np.ndarray
-) -> np.ndarray:
-    """
-    :param beta (*, B)
-    :param A (B, B)
-    :param b (B)
-    beta_neutral = A @ beta_gender + b
-    """
-    *dims, B = beta.shape
-    A = A[:10, :10].reshape((*(1,) * len(dims), B, B))
-    b = b[:10].reshape((*(1,) * len(dims), B))
-    return np.einsum("...ij,...j->...i", A, beta) + b
 
 def process_seq(
-    input_data: Dict,
+    input_path: str,
     out_path: str,
     smplh_root: str,
     dev_id: int,
+    beta_neutral: bool,
     reflect: bool = False,
     overwrite: bool = False,
     **kwargs,
@@ -461,14 +523,17 @@ def process_seq(
         guru.info(f"{out_path} already exists, skipping.")
         return
 
-    model_vars, meta = load_seq_smpl_params(input_data)
+    guru.info(f"process {input_path} to {out_path}")
 
-    guru.info("converting betas to gender neutral")
-    A_beta, b_beta = load_neutral_beta_conversion(meta["gender"])
-    model_vars["betas"] = convert_gender_neutral_beta(
-        model_vars["betas"], A_beta, b_beta
-    )
-    meta["gender"] = "neutral"
+    model_vars, meta = load_seq_smpl_params(input_path)
+
+    if beta_neutral:  # get the gender neutral beta
+        guru.info("converting betas to gender neutral")
+        A_beta, b_beta = load_neutral_beta_conversion(meta["gender"])
+        model_vars["betas"] = convert_gender_neutral_beta(
+            model_vars["betas"], A_beta, b_beta
+        )
+        meta["gender"] = "neutral"
 
     process_seq_data(
         model_vars, meta, out_path, dev_id, smplh_root, reflect=reflect, **kwargs
@@ -483,13 +548,14 @@ def process_seq_data(
     smplh_root: str,
     reflect: bool = False,
     split_frame_limit: int = 2000,
-    discard_shorter_than: float = 1.0, 
+    discard_shorter_than: float = 1.0,  # seconds
     out_fps: int = 30,
     save_verts: bool = False,
+    save_velocities: bool = True,  # save all parameter velocities available
 ):
     guru.info(f"Processing seq with meta {meta}")
     start_t = time.time()
-    
+
     gender = meta["gender"]
     src_fps = meta["fps"]
     num_frames = meta["num_frames"]
@@ -527,8 +593,9 @@ def process_seq_data(
     # 16<300 the SMPL class will set num_betas to 10...
     from smplx import SMPLH
 
-    assert SMPLH.SHAPE_SPACE_DIM in (300, 10)
-    SMPLH.SHAPE_SPACE_DIM = 10
+    assert SMPLH.SHAPE_SPACE_DIM in (300, 16)
+    SMPLH.SHAPE_SPACE_DIM = 16
+    # <HACKS>
 
     body_model = BodyModel(f"{smplh_root}/{gender}/model.npz", use_pca=False).to(device)
     model_vars = {k: torch.as_tensor(v).float() for k, v in model_vars.items()}
@@ -557,8 +624,6 @@ def process_seq_data(
     guru.info(f"Recovered joints and verts {joint_seq.shape}")
 
     out_dict = model_vars.copy()
-    
-    
     out_dict["joints"] = joint_seq
     out_dict["joints_loc"], _ = joints_global_to_local(
         convert_rotation(model_vars["root_orient"], "aa", "mat"),
@@ -596,10 +661,62 @@ def process_seq_data(
         }
     )
 
+    # estimate various velocities based on full frame rate
+    #       with second order central differences before downsampling
+    if save_velocities:
+        h = 1.0 / src_fps
+        lin_names = ["trans", "joints", "mojo_verts"]
+        ang_names = ["root_orient", "pose_body"]
+        cur_keys = lin_names + ang_names + ["contacts"]
+
+        for name in lin_names:
+            if name not in out_dict:
+                continue
+            out_dict[f"{name}_vel"] = estimate_velocity(out_dict[name], h)
+
+        # root orient
+        for name in ang_names:
+            if name not in out_dict:
+                continue
+            rot_aa = (
+                torch.as_tensor(out_dict[name]).reshape(num_frames, -1, 3).squeeze()
+            )
+            rot_mat = convert_rotation(rot_aa, "aa", "mat").numpy()
+            out_dict[f"{name}_vel"] = estimate_angular_velocity(rot_mat, h)
+
+        # joint up-axis angular velocity (need to compute joint frames first...)
+        # need the joint transform at all steps to find the angular velocity
+        joints_world2aligned_rot = compute_joint_align_mats(joint_seq)
+        joint_orient_vel = -estimate_angular_velocity(joints_world2aligned_rot, h)
+        # only need around z
+        out_dict["joint_orient_vel"] = joint_orient_vel[:, 2]
+
+        # throw out edge frames for other data so velocities are accurate
+        for name in cur_keys:
+            if name not in out_dict:
+                continue
+            out_dict[name] = out_dict[name][1:-1]
+        num_frames = num_frames - 2
+
+    # downsample frames
+    fps_ratio = float(out_fps) / src_fps
+    guru.info(f"Downsamp ratio: {fps_ratio}")
+    new_num_frames = int(fps_ratio * num_frames)
+    guru.info(f"Downsamp num frames: {new_num_frames}")
+    downsamp_inds = np.linspace(0, num_frames - 1, num=new_num_frames, dtype=int)
+
+    for k, v in out_dict.items():
+        # print(k, type(v))
+        if not isinstance(v, (torch.Tensor, np.ndarray)):
+            continue
+        if v.ndim >= 1:
+            # print("downsampling", k)
+            out_dict[k] = v[downsamp_inds]
+
     meta = {
         "fps": out_fps,
-        "num_frames": num_frames,
-
+        "num_frames": new_num_frames,
+        "gender": str(gender),
     }
 
     guru.info(f"Seq process time: {time.time() - start_t} s")
@@ -610,68 +727,97 @@ def process_seq_data(
 
 @dataclasses.dataclass
 class Config:
-    data_path: str = "/home/dev2/Drive_C/KHW/_egotext/head2motion/dataset/rich/WHAM/rich_test_vit.pth"
-    smplh_root: str = "/home/dev2/Drive_C/KHW/_egotext/head2motion/dataset/smplh"
-    out_root: str = "/home/dev2/Drive_C/KHW/_egotext/head2motion/dataset/rich/WHAM/preprocessed"
+    data_root: str
+    """Where the AMASS dataset is stored."""
+
+    smplh_root: str = "./data/smplh"
+    out_root: str = "./data/processed_30fps_no_skating/"
     devices: tuple[int, ...] = (0,)
+    """CUDA devices. We use CPU if not available."""
     overwrite: bool = False
 
 
+def check_skip(path_name: str) -> bool:
+    """Copied conditions from https://github.com/davrempe/humor/blob/main/humor/scripts/cleanup_amass_data.py"""
+    if "BioMotionLab_NTroje" in path_name and (
+        "treadmill" in path_name or "normal_" in path_name
+    ):
+        return True
+    if "MPI_HDM05" in path_name and "dg/HDM_dg_07-01" in path_name:
+        return True
+    return False
+
 
 def main(cfg: Config):
-    data_path = Path(cfg.data_path)
-    out_root_path = Path(cfg.out_root)
-    
-    guru.info(f"Loading data from {data_path}")
-    all_data = joblib.load(data_path)
-    
-    num_sequences = len(all_data['transl'])
-    guru.info(f"Found {num_sequences} sequences to process.")
-    
+    dsets = AMASS_SPLITS["all"]
+    paths_to_process = []
+    for dset in dsets:
+        paths_to_process.extend(
+            map(str, Path(f"{cfg.data_root}/{dset}").glob("**/*_poses.npz"))
+        )
+
     dev_ids = cfg.devices
-    guru.info(f"Using devices: {dev_ids}")
-    
-    (out_root_path / "neutral").mkdir(parents=True, exist_ok=True)
+    guru.info(f"devices {dev_ids}")
 
-    device = dev_ids[0] if dev_ids else "cpu"
-    
-    guru.info("processing in sequence")
-    
-    file_list = set()
-    
-    for i in tqdm(range(num_sequences)):
-        
-        sequence_data = {key: value[i] for key, value in all_data.items()}
-        
-        full_vid_path = all_data['vid'][i]
-        base_name = full_vid_path.split('/')[1]
-        
-        if base_name in file_list:
-            continue
-        file_list.add(base_name)
-        
-        out_path = out_root_path / "neutral" / f"{base_name}.npz"
-        r_out_path = out_root_path / "neutral" / f"{base_name}_reflect.npz"
+    if len(dev_ids) <= 1:
+        guru.info("processing in sequence")
+        for i, path in tqdm(enumerate(paths_to_process)):
+            if check_skip(path):
+                guru.info(f"skipping {path}")
+                continue
+            fname = path.split(cfg.data_root)[-1].rstrip("/")
+            name, ext = os.path.splitext(fname)
+            out_path = f"{cfg.out_root}/neutral/{name}{ext}"
+            r_out_path = f"{cfg.out_root}/neutral/{name}_reflect{ext}"
+            process_seq(
+                path,
+                out_path,
+                cfg.smplh_root,
+                dev_ids[i % len(dev_ids)],
+                beta_neutral=True,
+                reflect=False,
+                overwrite=cfg.overwrite,
+            )
+            process_seq(
+                path,
+                r_out_path,
+                cfg.smplh_root,
+                dev_ids[i % len(dev_ids)],
+                beta_neutral=True,
+                reflect=True,
+                overwrite=cfg.overwrite,
+            )
+        return
 
-        process_seq(
-            sequence_data,
-            out_path,
-            cfg.smplh_root,
-            device,
-            reflect=False,
-            overwrite=cfg.overwrite,
-        )
-        process_seq(
-            sequence_data,
-            r_out_path,
-            cfg.smplh_root,
-            device,
-            reflect=True,
-            overwrite=cfg.overwrite,
-        )
-        
-    return
-
+    with ProcessPoolExecutor(max_workers=len(dev_ids)) as exe:
+        for i, path in tqdm(enumerate(paths_to_process)):
+            if check_skip(path):
+                guru.info(f"skipping {path}")
+                continue
+            fname = path.split(cfg.data_root)[-1].rstrip("/")
+            name, ext = os.path.splitext(fname)
+            out_path = f"{cfg.out_root}/neutral/{name}{ext}"
+            r_out_path = f"{cfg.out_root}/neutral/{name}_reflect{ext}"
+            exe.submit(
+                process_seq,
+                path,
+                out_path,
+                cfg.smplh_root,
+                dev_ids[i % len(dev_ids)],
+                beta_neutral=True,
+                reflect=False,
+                overwrite=cfg.overwrite,
+            )
+            exe.submit(
+                process_seq,
+                path,
+                r_out_path,
+                cfg.smplh_root,
+                dev_ids[i % len(dev_ids)],
+                beta_neutral=True,
+                reflect=True,
+                overwrite=cfg.overwrite,
+            )
 
 
 if __name__ == "__main__":
