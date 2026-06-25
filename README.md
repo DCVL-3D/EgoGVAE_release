@@ -69,7 +69,7 @@ Once paths are configured, you can run the evaluation script:
 
 #### 🎥 Visualization
 1. **Merging Outputs**
-  - After the evaluation is complete, you can merge output `.npz` files into a single format using the provided script: 
+     - After the evaluation is complete, you can merge output `.npz` files into a single format using the provided script: 
 
       ```bash
       python utils/convert_npz_to_p.py \
@@ -78,8 +78,8 @@ Once paths are configured, you can run the evaluation script:
       ```
 
 2. **Visualize Outputs**
-   - We provide a script to visualize the merged results in 3D. 
-   - Our visualization tool is built upon [viser](https://github.com/nerfstudio-project/viser).
+We provide a script to visualize the merged results in 3D.  <br>
+Our visualization tool is built upon [viser](https://github.com/nerfstudio-project/viser).
 
    - To launch the visualization server, please run:
 
