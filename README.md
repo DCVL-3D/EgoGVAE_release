@@ -5,11 +5,12 @@ Official Pytorch implementation **"EgoGVAE: Ego-body Mesh Reconstruction via Gui
 [Jaehun Jung](https://github.com/jaehun00) and [Wonjun Kim](https://sites.google.com/view/dcvl) (Corresponding Author) <br>
 🏙️***European Conference on Computer Vision (ECCV)***, Sep. 2026.🏙️
 
-<p align="center"><img src='figures/results.gif'></p>
-<p align="center"><img src='figures/overall_architecture.png'></p>
-<p align="center">[ Overall architecture ]</p>
+## 🎥 Demo results
+https://github.com/user-attachments/assets/84280d6e-efab-421d-a83e-6cefa4594bed
 
 ## :eyes: Overview
+<p align="center"><img src='figures/overall_architecture.png'></p>
+<p align="center">[ Overall architecture ]</p>
 We propose a simple yet powerful method, **EgoGVAE**, for full-body mesh reconstruction from only the head pose of the wearer.
 
 **EgoGVAE** leverages the latent space of the motion-to-motion network, which is a variational autoencoder that takes full-body poses as inputs, **to guide the head-to-motion network**. <br>
