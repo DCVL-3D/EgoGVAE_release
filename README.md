@@ -6,7 +6,7 @@ Official Pytorch implementation **"EgoGVAE: Ego-body Mesh Reconstruction via Gui
 🏙️***European Conference on Computer Vision (ECCV)***, Sep. 2026.🏙️
 
 ## 🎥 Demo results
-https://github.com/user-attachments/assets/84280d6e-efab-421d-a83e-6cefa4594bed
+https://github.com/user-attachments/assets/8a56ee60-d7d6-4455-853e-c583b7a6eca2
 
 ## :eyes: Overview
 <p align="center"><img src='figures/overall_architecture.png'></p>
