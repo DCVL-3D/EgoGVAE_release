@@ -58,21 +58,16 @@ class TransformerBlock(nn.Module):
         return x
 
     def _sattn(self, x: Tensor, attn_mask: Tensor | None) -> Tensor:
-        
-        # Q, K, V 프로젝션
         q, k, v = self.sattn_qkv_proj(x).chunk(3, dim=-1)
 
-        # Multi-head 형태로 재배열
         q, k, v = map(
             lambda t: rearrange(t, "b t (nh dh) -> b nh t dh", nh=self.num_heads),
             (q, k, v),
         )
 
-        # Rotary Positional Embedding 적용
         q = self.rotary_emb.rotate_queries_or_keys(q)
         k = self.rotary_emb.rotate_queries_or_keys(k)
 
-        # Scaled Dot-Product Attention
         out = torch.nn.functional.scaled_dot_product_attention(
             q, k, v, attn_mask=attn_mask, dropout_p=self.dropout if self.training else 0.0
         )
@@ -122,7 +117,6 @@ class MotionEncoder(nn.Module):
             self.mu_token = nn.Parameter(torch.randn(latent_dim))
             self.logvar_token = nn.Parameter(torch.randn(latent_dim))
 
-
         self.encoder_layers = nn.ModuleList(
             [TransformerBlock(latent_dim=latent_dim) for _ in range(num_layers)]
         )
@@ -147,18 +141,16 @@ class MotionEncoder(nn.Module):
             xseq = torch.cat((mu_token, logvar_token, x), dim=1) # (B, 2+T, dim)
         else:
             xseq = x
-        # print(xseq.shape)
+
         if self.positional_embedding:
             xseq = self.sequence_pos_encoding(xseq)
 
         for layer in self.encoder_layers:
             xseq = layer(xseq, attn_mask=None)
-        # print(xseq.shape)
+
         final = self.output_norm(xseq)
         
         if self.vae:
-            # Before
-            # mu, logvar = final[:, 0, :], final[:, 0, :] # (B, 256)
             mu, logvar = final[:, 0, :], final[:, 1, :] # (B, 256)           
             std = logvar.exp().pow(0.5)
             return torch.distributions.Normal(mu, std), final[:, 2:, :]

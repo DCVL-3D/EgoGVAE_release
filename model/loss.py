@@ -36,61 +36,43 @@ class Head2MotionComputeLosses(nn.Module):
 
         # JOINT POSITION
         if self.lambda_keypoints > 0.0:
-            motion_keypoints_aligned = (motion_joints - motion_joints[:, :, [0], :])[:, :, 1:, :]
-            gt_keypoints_aligned = (gt_joints - gt_joints[:, :, [0], :])[:, :, 1:, :]
-
-            loss_keypoints = self.l1_loss(motion_keypoints_aligned, gt_keypoints_aligned) * self.lambda_keypoints
+            head_keypoints_aligned = (head_joints - head_joints[:, :, [0], :])[:, :, 1:, :] # (B, T, 21, 3)
+            motion_keypoints_aligned = (motion_joints - motion_joints[:, :, [0], :])[:, :, 1:, :] # (B, T, 21, 3)
+            gt_keypoints_aligned = (gt_joints - gt_joints[:, :, [0], :])[:, :, 1:, :] # (B, T, 21, 3)
+            
+            loss_keypoints = (self.l1_loss(head_keypoints_aligned, gt_keypoints_aligned) \
+                                + self.l1_loss(motion_keypoints_aligned, gt_keypoints_aligned)) * self.lambda_keypoints
             total_loss += loss_keypoints
-            losses["loss_keypoints"] = loss_keypoints
+            losses.update({'loss_keypoints': loss_keypoints})
         
         # JOINT ROTATION
         if self.lambda_theta > 0.0:
+            head_theta = model_outputs["head_theta"]
             motion_theta = model_outputs["motion_theta"]
             gt_theta = gt_motion[..., 6:132]
-            loss_theta = self.l1_loss(motion_theta, gt_theta) * self.lambda_theta
-            total_loss += loss_theta
-            losses["loss_theta"] = loss_theta
 
+            loss_theta = (self.l1_loss(head_theta, gt_theta) \
+                              + self.l1_loss(motion_theta, gt_theta)) * self.lambda_theta
+            total_loss += loss_theta
+            losses.update({'loss_theta': loss_theta})
+        
         # KL DIVERGENCE
         if self.lambda_kl > 0.0:
-            # print(epoch)
             progress_ratio = epoch / self.kl_anneal_end_step
             current_beta = min(1.0, progress_ratio) 
             current_lambda = self.lambda_kl * current_beta
             
             dist_head = model_outputs['head_dist']
             dist_motion = model_outputs['motion_dist']
-
-            dist_head_detached = torch.distributions.Normal(
-                dist_head.loc.detach(),
-                dist_head.scale.detach(),
-            )
-
+            
             mu_ref = torch.zeros_like(dist_head.loc)
             scale_ref = torch.ones_like(dist_head.scale)
             dist_ref = torch.distributions.Normal(mu_ref, scale_ref)
-            
-            # loss_kl = (torch.distributions.kl_divergence(dist_head, dist_ref).mean() \
-            #              + torch.distributions.kl_divergence(dist_motion, dist_ref).mean()) * current_lambda
-
-            # loss_kl = (
-            #     torch.distributions.kl_divergence(dist_head_detached, dist_ref).mean()
-            #     + torch.distributions.kl_divergence(dist_motion, dist_ref).mean()
-            # ) * current_lambda
-
-            # loss_kl_align = (
-            #     torch.distributions.kl_divergence(dist_head_detached, dist_motion).mean()
-            #     + torch.distributions.kl_divergence(dist_motion, dist_head_detached).mean()
-            # ) * current_lambda
-
-            loss_kl = (
-                torch.distributions.kl_divergence(dist_motion, dist_ref).mean()
-            ) * current_lambda
-
-            loss_kl_align = (
-                torch.distributions.kl_divergence(dist_motion, dist_head_detached).mean()
-            ) * current_lambda
-            
+        
+            loss_kl = (torch.distributions.kl_divergence(dist_head, dist_ref).mean() \
+                         + torch.distributions.kl_divergence(dist_motion, dist_ref).mean()) * current_lambda
+            loss_kl_align = (torch.distributions.kl_divergence(dist_head, dist_motion).mean() \
+                         + torch.distributions.kl_divergence(dist_motion, dist_head).mean()) * current_lambda
             total_loss += loss_kl
             total_loss += loss_kl_align
             losses.update({
@@ -100,7 +82,7 @@ class Head2MotionComputeLosses(nn.Module):
         
         # EMBEDDING Z
         if self.lambda_z > 0.0:
-            head_z = model_outputs["head_z"].detach()
+            head_z = model_outputs["head_z"]
             motion_z = model_outputs["motion_z"]
 
             loss_z = self.l1_loss(head_z, motion_z) * self.lambda_z
@@ -109,51 +91,57 @@ class Head2MotionComputeLosses(nn.Module):
         
         # BETAS
         if self.lambda_betas > 0.0:
+            head_betas = model_outputs["head_betas"]
             motion_betas = model_outputs["motion_betas"]
             gt_betas = batch.betas
-            loss_betas = self.l1_loss(motion_betas, gt_betas) * self.lambda_betas
+            
+            loss_betas = (self.l1_loss(head_betas, gt_betas) \
+                       + self.l1_loss(motion_betas, gt_betas)) * self.lambda_betas
             total_loss += loss_betas
-            losses["loss_betas"] = loss_betas
+            losses.update({'loss_betas': loss_betas})
         
         # CONTACTS
         if self.lambda_contacts > 0.0:
+            head_contacts = model_outputs["head_contacts"]
             motion_contacts = model_outputs["motion_contacts"]
             gt_contacts = batch.contacts
-            loss_contacts = self.bce_loss(motion_contacts, gt_contacts).mean() * self.lambda_contacts
+            
+            loss_contacts = (self.bce_loss(head_contacts, gt_contacts).mean() \
+                          + self.bce_loss(motion_contacts, gt_contacts).mean()) * self.lambda_contacts
             total_loss += loss_contacts
-            losses["loss_contacts"] = loss_contacts
-        
+            losses.update({'loss_contacts': loss_contacts})
+
+            # JOINT SKATING
+            if self.lambda_skating > 0.0:
+                head_vel = head_joints[:, 1:] - head_joints[:, :-1]
+                head_contacts_prob = torch.sigmoid(head_contacts)
+                head_vel_for_contact = head_vel[:, :, 1:, :]
+                head_contacts_aligned = head_contacts_prob[:, :-1, :]
+                horizontal_vel = head_vel_for_contact[..., :2]
+                horizontal_speed_sq = torch.norm(horizontal_vel, dim=-1) ** 2
+
+                motion_vel = motion_joints[:, 1:] - motion_joints[:, :-1]
+                motion_contacts_prob = torch.sigmoid(motion_contacts)
+                motion_vel_for_contact = motion_vel[:, :, 1:, :]
+                motion_contacts_aligned = motion_contacts_prob[:, :-1, :]
+                motion_horizontal_vel = motion_vel_for_contact[..., :2]
+                motion_horizontal_speed_sq = torch.norm(motion_horizontal_vel, dim=-1) ** 2
+
+                loss_skating = ((head_contacts_aligned * horizontal_speed_sq).mean() \
+                             + (motion_contacts_aligned * motion_horizontal_speed_sq).mean()) * self.lambda_skating
+                total_loss += loss_skating
+                losses.update({'loss_skating': loss_skating})
+
         # JOINT VELOCITY
         if self.lambda_velocity > 0.0:
-            motion_vel = motion_joints[:, 1:] - motion_joints[:, :-1]
+            head_vel = head_joints[:, 1:] - head_joints[:, :-1] 
+            motion_vel = motion_joints[:, 1:] - motion_joints[:, :-1] 
             gt_vel = gt_joints[:, 1:] - gt_joints[:, :-1]
-            loss_joint_velocity = self.l1_loss(motion_vel, gt_vel) * self.lambda_velocity
+            
+            loss_joint_velocity = (self.l1_loss(head_vel, gt_vel) \
+                                + self.l1_loss(motion_vel, gt_vel)) * self.lambda_velocity
             total_loss += loss_joint_velocity
-            losses["loss_joint_velocity"] = loss_joint_velocity
+            losses.update({'loss_joint_velocity': loss_joint_velocity})
         
-        # JOINT SKATING
-        if self.lambda_skating > 0.0:
-            head_contacts = model_outputs["motion_contacts"]
-            head_vel = head_joints[:, 1:] - head_joints[:, :-1]
-            head_contacts_prob = torch.sigmoid(head_contacts)
-            head_vel_for_contact = head_vel[:, :, 1:, :]
-            head_contacts_aligned = head_contacts_prob[:, :-1, :]
-            horizontal_vel = head_vel_for_contact[..., :2]
-            horizontal_speed_sq = torch.norm(horizontal_vel, dim=-1) ** 2
-
-            motion_vel = motion_joints[:, 1:] - motion_joints[:, :-1]
-            motion_contacts_prob = torch.sigmoid(motion_contacts)
-            motion_vel_for_contact = motion_vel[:, :, 1:, :]
-            motion_contacts_aligned = motion_contacts_prob[:, :-1, :]
-            # horizontal_vel = motion_vel_for_contact[..., :2]
-            # horizontal_speed_sq = torch.norm(horizontal_vel, dim=-1) ** 2
-            motion_horizontal_vel = motion_vel_for_contact[..., :2]
-            motion_horizontal_speed_sq = torch.norm(motion_horizontal_vel, dim=-1) ** 2
-
-            loss_skating = ((head_contacts_aligned * horizontal_speed_sq).mean() \
-                         + (motion_contacts_aligned * motion_horizontal_speed_sq).mean()) * self.lambda_skating
-            total_loss += loss_skating
-            losses.update({'loss_skating': loss_skating})
-
         losses.update({'loss_total': total_loss})
         return losses

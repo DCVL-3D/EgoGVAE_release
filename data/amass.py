@@ -33,7 +33,7 @@ class AmassHdf5Dataset(torch.utils.data.Dataset[TrainingData]):
             "deterministic",
             "random_uniform_len",
             "random_variable_len",
-            "full_seq",               # ✅ 추가
+            "full_seq",             
         ],
         min_subseq_len: int | None = None,
         random_variable_len_proportion: float = 0.3,
@@ -47,7 +47,7 @@ class AmassHdf5Dataset(torch.utils.data.Dataset[TrainingData]):
             "deterministic",
             "random_uniform_len",
             "random_variable_len",
-            "full_seq",              # ✅ 추가
+            "full_seq",              
         ] = slice_strategy
 
         self._random_variable_len_proportion = random_variable_len_proportion
@@ -70,7 +70,6 @@ class AmassHdf5Dataset(torch.utils.data.Dataset[TrainingData]):
 
             self._subseq_len = subseq_len
 
-            # ✅ full_seq에서는 "각 group 당 1개"가 더 자연스러움
             if self._slice_strategy == "full_seq":
                 self._approximated_length = len(self._groups)
             else:
@@ -85,7 +84,6 @@ class AmassHdf5Dataset(torch.utils.data.Dataset[TrainingData]):
         self._cache: dict[str, dict[str, Any]] | None = {} if cache_files else None
 
     def __getitem__(self, index: int) -> TrainingData:
-        # ✅ full_seq면 group당 1개만 뽑는게 자연스러우니 index를 group index로 사용
         if self._slice_strategy == "full_seq":
             group_index = index % len(self._groups)
             slice_index = 0
@@ -111,14 +109,11 @@ class AmassHdf5Dataset(torch.utils.data.Dataset[TrainingData]):
         total_t = cast(h5py.Dataset, npz_group["T_world_root"]).shape[0]
         assert total_t >= self._subseq_len
 
-        # -------------------------
-        # slice 전략
-        # -------------------------
         if self._slice_strategy == "full_seq":
             start_t = 0
             end_t = total_t
-            mask = torch.ones(total_t, dtype=torch.bool)  # ✅ full length mask
-            target_len = total_t                          # ✅ padding 없음
+            mask = torch.ones(total_t, dtype=torch.bool)  
+            target_len = total_t                      
         else:
             mask = torch.ones(self._subseq_len, dtype=torch.bool)
             target_len = self._subseq_len
@@ -167,7 +162,6 @@ class AmassHdf5Dataset(torch.utils.data.Dataset[TrainingData]):
                 assert v.shape[0] == total_t
                 array = v[start_t:end_t]
 
-            # ✅ full_seq에서는 padding 하지 않음
             if self._slice_strategy != "full_seq":
                 if array.shape[0] != target_len:
                     array = np.concatenate(

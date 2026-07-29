@@ -12,22 +12,19 @@ from data.dataclass import collate_dataclass
 from data.body_model import BodyModel
 
 # Network
-from model.network_7 import Head2Motion
+from model.network import Head2Motion
 
 # Criterion
 from model.loss import Head2MotionComputeLosses
 
 # Utils
-from model.utils import input_data, set_seed, input_data_all, save_loss_to_csv
+from model.utils import set_seed, input_data_all, save_loss_to_csv
 from model.utils_checkpoint import save_checkpoint
-from utils.smplh_egoallo import build_smplh_posed_paper, extract_joints_vertices
+from utils.smplh_utils import build_smplh_posed, extract_joints_vertices
 from utils.from_egoallo import fncsmpl 
 
-# Metric
-from model.metric import egoallo_metric_train, print_metrics
-
 # Config
-from config.config_v1_7 import *
+from config.config import *
 
 def train():
 
@@ -49,7 +46,6 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Using device: {device}")
 
-    # --- 데이터셋 및 데이터로더 ---
     train_dataset = AmassHdf5Dataset(
         hdf5_path=HDF5_PATH,
         file_list_path=FILE_LIST_PATH,
@@ -87,14 +83,9 @@ def train():
         kl_anneal_end_step=TrainConfig.KL_ANNEAL_END_STEP
     )
     
-    
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE, weight_decay=1E-4)
-    metrics = {
-            'mpjpe': 0.0,
-            'pampjpe': 0.0,
-            'num_samples': 0,
-    }
-    # --- 학습 루프 ---
+
+    loss = 0.0
     global_step = 1
     for epoch in range(MAX_EPOCHS):
         model.train()
@@ -110,7 +101,7 @@ def train():
             optimizer.zero_grad()
 
             outputs = model(head, motion)
-            head_posed, motion_posed, gt_posed, head_betas, motion_betas = build_smplh_posed_paper(outputs, batch, egoallo_smpl)
+            head_posed, motion_posed, gt_posed, head_betas, motion_betas = build_smplh_posed(outputs, batch, egoallo_smpl)
             
             head_joints, _ = extract_joints_vertices(head_posed, head_betas, smplh)
             motion_joints, _ = extract_joints_vertices(motion_posed, motion_betas, smplh)
@@ -127,10 +118,7 @@ def train():
             
             progress_bar.set_postfix(loss=loss.item())
             
-            save_loss_to_csv('./train_log_2_6.csv', loss_dict)
-            
-            
-            
+            save_loss_to_csv('./train.csv', loss_dict)
 
         epoch_loss = running_loss / len(train_loader)
         print(f"Epoch {epoch+1} finished, Average Loss: {epoch_loss:.4f}")

@@ -27,7 +27,7 @@ class TransformerBlock(nn.Module):
 
         # 2. Cross-Attention Layers
         self.layernorm2 = nn.LayerNorm(latent_dim)
-        # Query는 디코더의 입력(x)에서, Key와 Value는 인코더 출력에서 가져옵니다.
+
         self.cattn_q_proj = nn.Linear(latent_dim, latent_dim, bias=False)
         self.cattn_kv_proj = nn.Linear(latent_dim, latent_dim * 2, bias=False)
         self.cattn_out_proj = nn.Linear(latent_dim, latent_dim, bias=False)
@@ -68,20 +68,16 @@ class TransformerBlock(nn.Module):
         return q
 
     def _sattn(self, x: Tensor, attn_mask: Tensor | None) -> Tensor:
-        # Q, K, V 프로젝션
         q, k, v = self.sattn_qkv_proj(x).chunk(3, dim=-1)
 
-        # Multi-head 형태로 재배열
         q, k, v = map(
             lambda t: rearrange(t, "b t (nh dh) -> b nh t dh", nh=self.num_heads),
             (q, k, v),
         )
 
-        # Rotary Positional Embedding 적용
         q = self.rotary_emb.rotate_queries_or_keys(q)
         k = self.rotary_emb.rotate_queries_or_keys(k)
 
-        # Scaled Dot-Product Attention
         out = torch.nn.functional.scaled_dot_product_attention(
             q, k, v, attn_mask=attn_mask, dropout_p=self.dropout if self.training else 0.0
         )
@@ -90,19 +86,15 @@ class TransformerBlock(nn.Module):
         return self.sattn_out_proj(out)
 
     def _cattn(self, x: Tensor, z: Tensor, attn_mask: Tensor | None) -> Tensor:
-        # Query는 디코더의 현재 상태(x)에서 프로젝션
         q = self.cattn_q_proj(x)
         
-        # Key와 Value는 인코더의 최종 출력(encoder_output)에서 프로젝션
         k, v = self.cattn_kv_proj(z).chunk(2, dim=-1)
 
-        # Multi-head 형태로 재배열
         q, k, v = map(
             lambda t: rearrange(t, "b t (nh dh) -> b nh t dh", nh=self.num_heads),
             (q, k, v),
         )
         
-        # Scaled Dot-Product Attention (Cross-Attention에는 보통 Rotary Embedding을 적용하지 않음)
         out = torch.nn.functional.scaled_dot_product_attention(
             q, k, v, attn_mask=attn_mask, dropout_p=self.dropout if self.training else 0.0
         )
@@ -127,8 +119,6 @@ class MotionDecoder(nn.Module):
 
         self.output_norm = nn.LayerNorm(latent_dim)
 
-        # self.final_layer = nn.Linear(latent_dim, output_feats)
-
     def forward(self, feat: Tensor, z: Tensor) -> Tensor:
         # z: (B, 256)
         # feat: (B, T, 256)
@@ -142,6 +132,4 @@ class MotionDecoder(nn.Module):
 
         out = self.output_norm(feat)
         
-        # final = self.final_layer(out) # (B, T, 132)
-        # return final
         return out
