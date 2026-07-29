@@ -5,7 +5,7 @@ Official Pytorch implementation **"EgoGVAE: Ego-body Mesh Reconstruction via Gui
 [Jaehun Jung](https://github.com/jaehun00) and [Wonjun Kim](https://sites.google.com/view/dcvl) (Corresponding Author) <br>
 🏙️***European Conference on Computer Vision (ECCV)***, Sep. 2026.🏙️
 
-https://github.com/user-attachments/assets/8a56ee60-d7d6-4455-853e-c583b7a6eca2
+https://github.com/user-attachments/assets/68b08c91-a1eb-40b7-bbb3-307d314dd7ae
 
 ## :eyes: Overview
 <p align="center"><img src='figures/overall_architecture.png'></p>
