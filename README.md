@@ -109,3 +109,13 @@ Our implementation and experiments are built on top of open-source GitHub reposi
 
 ## Citation
 If you find our work useful for your project, please consider citing the following paper.
+
+```bibtex
+@inproceedings{jung2026egogvae,
+  title={EgoGVAE: Ego-body Mesh Reconstruction via Guided Variational Autoencoder},
+  author={Jung, Jaehun and Kim, Wonjun},
+  booktitle={European Conference on Computer Vision},
+  pages={561--578},
+  year={2026},
+  organization={Springer}
+}
