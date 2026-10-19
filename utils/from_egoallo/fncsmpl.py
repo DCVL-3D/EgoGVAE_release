@@ -27,23 +27,32 @@ from pathlib import Path
 import numpy as np
 import torch
 from einops import einsum
-
+from jaxtyping import Float, Int
 from torch import Tensor
 
-from data.tensor_dataclass import TensorDataclass
-from utils.from_egoallo.transforms import SE3, SO3
+from .tensor_dataclass import TensorDataclass
+from .transforms import SE3, SO3
 
 
 class SmplhModel(TensorDataclass):
     """A human body model from the SMPL family."""
 
-    faces: Tensor
-    J_regressor: Tensor
-    parent_indices: int
-    weights: Tensor
-    posedirs: Tensor
-    v_template: Tensor
-    shapedirs: Tensor
+    faces: Int[Tensor, "faces 3"]
+    """Vertex indices for mesh faces."""
+    J_regressor: Float[Tensor, "joints+1 verts"]
+    """Linear map from vertex to joint positions.
+    For SMPL-H, 1 root + 21 body joints + 2 * 15 hand joints."""
+    parent_indices: tuple[int, ...]
+    """Defines kinematic tree. Index of -1 signifies that a joint is defined
+    relative to the root."""
+    weights: Float[Tensor, "verts joints+1"]
+    """LBS weights."""
+    posedirs: Float[Tensor, "verts 3 joints*9"]
+    """Pose blend shape bases."""
+    v_template: Float[Tensor, "verts 3"]
+    """Canonical mesh verts."""
+    shapedirs: Float[Tensor, "verts 3 n_betas"]
+    """Shape bases."""
 
     @staticmethod
     def load(model_path: Path) -> SmplhModel:
@@ -82,7 +91,7 @@ class SmplhModel(TensorDataclass):
         """Get the number of joints in this model."""
         return len(self.parent_indices)
 
-    def with_shape(self, betas) -> SmplhShaped:
+    def with_shape(self, betas: Float[Tensor, "*#batch n_betas"]) -> SmplhShaped:
         """Compute a new body model, with betas applied."""
         num_betas = betas.shape[-1]
         assert num_betas <= self.shapedirs.shape[-1]
@@ -112,23 +121,23 @@ class SmplhShaped(TensorDataclass):
 
     body_model: SmplhModel
     """The underlying body model."""
-    root_offset: Tensor
-    verts_zero: Tensor
+    root_offset: Float[Tensor, "*#batch 3"]
+    verts_zero: Float[Tensor, "*#batch verts 3"]
     """Vertices of shaped body _relative to the root joint_ at the zero
     configuration."""
-    joints_zero: Tensor
+    joints_zero: Float[Tensor, "*#batch joints 3"]
     """Joints of shaped body _relative to the root joint_ at the zero
     configuration."""
-    t_parent_joint: Tensor
+    t_parent_joint: Float[Tensor, "*#batch joints 3"]
     """Position of each shaped body joint relative to its parent. Does not
     include root."""
 
     def with_pose_decomposed(
         self,
-        T_world_root,
-        body_quats,
-        left_hand_quats = None,
-        right_hand_quats = None,
+        T_world_root: Float[Tensor, "*#batch 7"],
+        body_quats: Float[Tensor, "*#batch 21 4"],
+        left_hand_quats: Float[Tensor, "*#batch 15 4"] | None = None,
+        right_hand_quats: Float[Tensor, "*#batch 15 4"] | None = None,
     ) -> SmplhShapedAndPosed:
         """Pose our SMPL-H body model. Returns a set of joint and vertex outputs."""
 
@@ -148,8 +157,8 @@ class SmplhShaped(TensorDataclass):
 
     def with_pose(
         self,
-        T_world_root,
-        local_quats,
+        T_world_root: Float[Tensor, "*#batch 7"],
+        local_quats: Float[Tensor, "*#batch joints 4"],
     ) -> SmplhShapedAndPosed:
         """Pose our SMPL-H body model. Returns a set of joint and vertex outputs."""
 
@@ -175,17 +184,17 @@ class SmplhShapedAndPosed(TensorDataclass):
     shaped_model: SmplhShaped
     """Underlying shaped body model."""
 
-    T_world_root: Tensor
+    T_world_root: Float[Tensor, "*#batch 7"]
     """Root coordinate frame."""
 
-    local_quats: Tensor
+    local_quats: Float[Tensor, "*#batch joints 4"]
     """Local joint orientations."""
 
-    Ts_world_joint: Tensor
+    Ts_world_joint: Float[Tensor, "*#batch joints 7"]
     """Absolute transform for each joint. Does not include the root."""
 
     def with_new_T_world_root(
-        self, T_world_root
+        self, T_world_root: Float[Tensor, "*#batch 7"]
     ) -> SmplhShapedAndPosed:
         return SmplhShapedAndPosed(
             shaped_model=self.shaped_model,
@@ -259,19 +268,19 @@ class SmplMesh(TensorDataclass):
     posed_model: SmplhShapedAndPosed
     """Posed model that this mesh was computed for."""
 
-    verts: Tensor
+    verts: Float[Tensor, "*#batch verts 3"]
     """Vertices for mesh."""
 
-    faces: Tensor
+    faces: Int[Tensor, "verts 3"]
     """Faces for mesh."""
 
 
 def forward_kinematics(
-    T_world_root,
-    Rs_parent_joint,
-    t_parent_joint,
-    parent_indices,
-):
+    T_world_root: Float[Tensor, "*#batch 7"],
+    Rs_parent_joint: Float[Tensor, "*#batch joints 4"],
+    t_parent_joint: Float[Tensor, "*#batch joints 3"],
+    parent_indices: tuple[int, ...],
+) -> Float[Tensor, "*#batch joints 7"]:
     """Run forward kinematics to compute absolute poses (T_world_joint) for
     each joint. The output array containts pose parameters
     (w, x, y, z, tx, ty, tz) for each joint. (this does not include the root!)

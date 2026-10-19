@@ -1,17 +1,17 @@
-
+"""EgoAllo-specific SMPL utilities."""
 
 from __future__ import annotations
 
 
 import numpy as np
 import torch
-
+from jaxtyping import Float
 from torch import Tensor
 
 from . import fncsmpl, transforms
 
 
-def get_T_world_cpf(mesh: fncsmpl.SmplMesh):
+def get_T_world_cpf(mesh: fncsmpl.SmplMesh) -> Float[Tensor, "*#batch 7"]:
     """Get the central pupil frame from a mesh. This assumes that we're using the SMPL-H model."""
 
     assert mesh.verts.shape[-2:] == (6890, 3), "Not using SMPL-H model!"
@@ -26,7 +26,7 @@ def get_T_world_cpf(mesh: fncsmpl.SmplMesh):
     return torch.cat([cpf_orientation, cpf_pos], dim=-1)
 
 
-def get_T_head_cpf(shaped: fncsmpl.SmplhShaped):
+def get_T_head_cpf(shaped: fncsmpl.SmplhShaped) -> Float[Tensor, "*#batch 7"]:
     """Get the central pupil frame with respect to the head (joint 14). This
     assumes that we're using the SMPL-H model."""
 
@@ -52,8 +52,8 @@ def get_T_head_cpf(shaped: fncsmpl.SmplhShaped):
 
 def get_T_world_root_from_cpf_pose(
     posed: fncsmpl.SmplhShapedAndPosed,
-    Ts_world_cpf,
-):
+    Ts_world_cpf: Float[Tensor | np.ndarray, "... 7"],
+) -> Float[Tensor, "... 7"]:
     """Get the root transform that would align the CPF frame of `posed` to `Ts_world_cpf`."""
     device = posed.Ts_world_joint.device
     dtype = posed.Ts_world_joint.dtype
